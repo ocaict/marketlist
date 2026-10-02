@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local SQLite databases
+server/data/
+*.db
+*.db-shm
+*.db-wal
+
+# Capacitor
+client/android/
+client/ios/
+client/.capacitor/
+
+# TypeScript
+*.tsbuildinfo

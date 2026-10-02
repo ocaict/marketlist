@@ -1,0 +1,31 @@
+[PASS] Register user -> 201 Registration successful
+[PASS] Register second user -> 201 Registration successful
+[PASS] Register invalid input rejected -> 400 
+[PASS] Create category -> 201 
+[PASS] Empty category name rejected -> 400 
+[PASS] Get categories -> 200 
+[PASS] Update category -> 200 
+[PASS] Update non-existent category -> 404 -> 404 
+[PASS] Create product -> 201 
+[PASS] Negative stock rejected -> 400 
+[PASS] Negative price rejected -> 400 
+[PASS] Missing fields rejected -> 400 
+[PASS] Create low-stock product -> 201 
+[PASS] Get products list -> 200 count=2
+[PASS] Get single product -> 200 
+[PASS] Get non-existent product -> 404 -> 404 
+[PASS] Update product -> 200 
+[PASS] Update non-existent product -> 404 -> 404 
+[PASS] Delete product -> 204 
+[PASS] Deleted product -> 404 -> 404 
+[PASS] Delete non-existent product -> 404 -> 404 
+[PASS] Cross-user isolation (other user sees 0 products) -> 200 count=0
+[PASS] Cross-user access to other product -> 404 -> 404 
+[PASS] Cross-user update rejected -> 404 
+[PASS] Cross-user delete rejected -> 404 
+[PASS] Unauthenticated access blocked -> 401 
+[PASS] Product with non-owned category rejected -> 400 
+[PASS] Create product without category -> 201 
+[PASS] Delete category with products -> 204 -> 204 
+
+=== 29 passed, 0 failed ===

@@ -1,0 +1,129 @@
+/* MarketList Theme — Ionic CSS Variables */
+/* Centralized brand palette. Change here to re-skin the entire app. */
+
+:root {
+  /* Primary — Professional Green */
+  --ion-color-primary: #16a34a;
+  --ion-color-primary-rgb: 22, 163, 74;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #15803d;
+  --ion-color-primary-tint: #22c55e;
+
+  /* Secondary — Dark Navy/Charcoal */
+  --ion-color-secondary: #1e293b;
+  --ion-color-secondary-rgb: 30, 41, 59;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #0f172a;
+  --ion-color-secondary-tint: #334155;
+
+  /* Tertiary — Light accent */
+  --ion-color-tertiary: #f0fdf4;
+  --ion-color-tertiary-rgb: 240, 253, 244;
+  --ion-color-tertiary-contrast: #1e293b;
+  --ion-color-tertiary-contrast-rgb: 30, 41, 59;
+  --ion-color-tertiary-shade: #dcfce7;
+  --ion-color-tertiary-tint: #f7fef9;
+
+  /* Success — Green */
+  --ion-color-success: #16a34a;
+  --ion-color-success-rgb: 22, 163, 74;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #15803d;
+  --ion-color-success-tint: #22c55e;
+
+  /* Warning — Amber */
+  --ion-color-warning: #f59e0b;
+  --ion-color-warning-rgb: 245, 158, 11;
+  --ion-color-warning-contrast: #ffffff;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #d97706;
+  --ion-color-warning-tint: #fbbf24;
+
+  /* Danger — Red */
+  --ion-color-danger: #ef4444;
+  --ion-color-danger-rgb: 239, 68, 68;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #dc2626;
+  --ion-color-danger-tint: #f87171;
+
+  /* Light — Neutral background */
+  --ion-color-light: #f8fafc;
+  --ion-color-light-rgb: 248, 250, 252;
+  --ion-color-light-contrast: #1e293b;
+  --ion-color-light-contrast-rgb: 30, 41, 59;
+  --ion-color-light-shade: #e2e8f0;
+  --ion-color-light-tint: #ffffff;
+
+  /* Medium — Muted text/borders */
+  --ion-color-medium: #94a3b8;
+  --ion-color-medium-rgb: 148, 163, 184;
+  --ion-color-medium-contrast: #1e293b;
+  --ion-color-medium-contrast-rgb: 30, 41, 59;
+  --ion-color-medium-shade: #64748b;
+  --ion-color-medium-tint: #cbd5e1;
+
+  /* Dark — Deep text */
+  --ion-color-dark: #0f172a;
+  --ion-color-dark-rgb: 15, 23, 42;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #020617;
+  --ion-color-dark-tint: #1e293b;
+
+  /* Background */
+  --ion-background-color: #f8fafc;
+  --ion-background-color-rgb: 248, 250, 252;
+  --ion-text-color: #0f172a;
+  --ion-text-color-rgb: 15, 23, 42;
+
+  /* Toolbar / Header */
+  --ion-toolbar-background: #ffffff;
+  --ion-toolbar-color: #0f172a;
+  --ion-toolbar-border-color: #e2e8f0;
+
+  /* Tab bar */
+  --ion-tab-bar-background: #ffffff;
+  --ion-tab-bar-color: #94a3b8;
+  --ion-tab-bar-color-selected: #16a34a;
+
+  /* Card */
+  --ion-card-background: #ffffff;
+
+  /* Border radius */
+  --app-border-radius: 12px;
+  --app-border-radius-sm: 8px;
+  --app-border-radius-lg: 16px;
+
+  /* Spacing */
+  --app-spacing-xs: 4px;
+  --app-spacing-sm: 8px;
+  --app-spacing-md: 16px;
+  --app-spacing-lg: 24px;
+  --app-spacing-xl: 32px;
+
+  /* Shadows */
+  --app-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --app-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --app-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ion-background-color: #0f172a;
+    --ion-background-color-rgb: 15, 23, 42;
+    --ion-text-color: #f1f5f9;
+    --ion-text-color-rgb: 241, 245, 249;
+    --ion-toolbar-background: #1e293b;
+    --ion-toolbar-color: #f1f5f9;
+    --ion-toolbar-border-color: #334155;
+    --ion-tab-bar-background: #1e293b;
+    --ion-tab-bar-color: #64748b;
+    --ion-tab-bar-color-selected: #22c55e;
+    --ion-card-background: #1e293b;
+  }
+}

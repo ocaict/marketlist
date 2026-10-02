@@ -1,0 +1,146 @@
+/* MarketList Global Styles */
+
+/* Import Ionic core */
+@import '@ionic/react/css/core.css';
+@import '@ionic/react/css/normalize.css';
+@import '@ionic/react/css/structure.css';
+@import '@ionic/react/css/typography.css';
+@import '@ionic/react/css/padding.css';
+@import '@ionic/react/css/float-elements.css';
+@import '@ionic/react/css/text-alignment.css';
+@import '@ionic/react/css/text-transformation.css';
+@import '@ionic/react/css/flex-utils.css';
+@import '@ionic/react/css/display.css';
+
+/* Import theme variables */
+@import './variables.css';
+
+/* ===== Base ===== */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--ion-background-color);
+  color: var(--ion-text-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Utility Classes ===== */
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--app-spacing-md);
+}
+
+.app-card {
+  background: var(--ion-card-background);
+  border-radius: var(--app-border-radius);
+  box-shadow: var(--app-shadow-md);
+  padding: var(--app-spacing-md);
+  border: 1px solid var(--ion-color-light-shade);
+}
+
+.app-card + .app-card {
+  margin-top: var(--app-spacing-md);
+}
+
+.app-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--ion-text-color);
+  margin: 0 0 var(--app-spacing-sm) 0;
+}
+
+.app-text-muted {
+  color: var(--ion-color-medium-shade);
+  font-size: 0.875rem;
+}
+
+.app-text-small {
+  font-size: 0.75rem;
+  color: var(--ion-color-medium);
+}
+
+.app-divider {
+  height: 1px;
+  background: var(--ion-color-light-shade);
+  margin: var(--app-spacing-md) 0;
+  border: none;
+}
+
+/* ===== Grid helpers ===== */
+.app-grid {
+  display: grid;
+  gap: var(--app-spacing-md);
+}
+
+.app-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.app-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.app-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .app-grid-3,
+  .app-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .app-grid-2,
+  .app-grid-3,
+  .app-grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .app-container {
+    padding: var(--app-spacing-sm);
+  }
+}
+
+/* ===== Ion overrides ===== */
+ion-content {
+  --background: var(--ion-background-color);
+}
+
+ion-card {
+  border-radius: var(--app-border-radius);
+  box-shadow: var(--app-shadow-md);
+  margin: 0;
+}
+
+ion-button {
+  --border-radius: var(--app-border-radius-sm);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+ion-item {
+  --border-radius: var(--app-border-radius-sm);
+}
+
+/* Safe area for mobile */
+ion-header ion-toolbar {
+  padding-top: env(safe-area-inset-top);
+}
+
+ion-tab-bar {
+  padding-bottom: env(safe-area-inset-bottom);
+}
