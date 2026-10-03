@@ -4,6 +4,7 @@ import { Route, Redirect, useHistory, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import TabBar from './components/TabBar';
+import OfflineBanner from './components/OfflineBanner';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoadingState from './components/LoadingState';
 import Welcome from './pages/Welcome';
@@ -71,6 +72,7 @@ function AppRoutes() {
 
       </IonRouterOutlet>
       {isAuthenticated && <TabBar />}
+      <OfflineBanner />
       <IonToast
         isOpen={Boolean(successMessage)}
         message={successMessage || undefined}

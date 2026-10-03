@@ -47,6 +47,7 @@ import {
 } from '../services/inventory';
 import { ApiRequestError } from '../services/api';
 import { Category, Product } from '../types';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 interface ProductForm {
   name: string;
@@ -464,6 +465,31 @@ function Products() {
                 }
               />
             </IonItem>
+            <IonButton
+              type="button"
+              fill="outline"
+              expand="block"
+              onClick={async () => {
+                try {
+                  const photo = await Camera.getPhoto({
+                    resultType: CameraResultType.DataUrl,
+                    source: CameraSource.Prompt,
+                    quality: 50,
+                  });
+                  if (photo.dataUrl) {
+                    setForm((current) => ({ ...current, imageUrl: photo.dataUrl! }));
+                  }
+                } catch (err) {
+                  // User cancelled or permission denied — surface gracefully.
+                  const message = err instanceof Error ? err.message : '';
+                  if (!/cancel/i.test(message)) {
+                    setToastMessage('Camera or photo permission was denied. You can still paste an image URL.');
+                  }
+                }
+              }}
+            >
+              Take or Choose Photo
+            </IonButton>
             <IonButton type="submit" expand="block" disabled={savingProduct}>
               {savingProduct ? 'Saving...' : editorMode === 'edit' ? 'Save changes' : 'Add product'}
             </IonButton>

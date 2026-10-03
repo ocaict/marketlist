@@ -53,6 +53,71 @@ marketlist/
 - [Node.js](https://nodejs.org/) v18+ (LTS recommended)
 - npm v9+
 
+### For Android builds
+
+- [Android Studio](https://developer.android.com/studio) (includes the Android SDK and an emulator manager)
+- JDK 17 (bundled with Android Studio as "jbr" — set `JAVA_HOME` to it, e.g. `C:\Program Files\Android\Android Studio\jbr`)
+- Android SDK Platform 34 + Build-Tools (install via Android Studio → SDK Manager; the Gradle build will also tell you what it needs)
+- A physical device with USB debugging enabled, **or** an AVD emulator created in Android Studio
+- On Windows, ensure `java`, `adb`, and `platform-tools` are on your PATH (or call them via Android Studio's bundled paths)
+
+## Mobile (Capacitor + Android)
+
+The Android project lives in `client/android/`. Capacitor config: `client/capacitor.config.ts`
+(appId `com.marketlist.app`, app name `MarketList`, `webDir: dist`, HTTPS scheme by default).
+
+### First-time setup
+
+```bash
+cd client
+npm install
+npx cap add android     # already done — safe to skip
+```
+
+### Every code change
+
+```bash
+cd client
+npm run build           # rebuilds dist/
+npx cap sync android    # copies web assets + updates plugins
+```
+
+### Run on an emulator or device
+
+```bash
+cd client
+npx cap run android                      # picks a connected device/emulator
+npx cap run android --target emulator-5554
+npm run android:emulator                 # build + sync + run in one step
+```
+
+### Open in Android Studio
+
+```bash
+cd client
+npx cap open android
+```
+
+### Point the app at your API
+
+Set `VITE_API_URL` in `client/.env` **before** `npm run build`:
+
+- Cloud backend (production): `https://marketlist-api-g8ms.onrender.com/api`
+- Local server on emulator: `http://10.0.2.2:3600/api` (plus `CAPACITOR_ANDROID_DEBUG=true npx cap sync android` for cleartext HTTP)
+- Local server on physical device (same Wi-Fi): `http://<your-pc-ip>:3600/api` (also needs the debug cleartext flag)
+
+### Branding
+
+App icon and splash resources are in `client/android/app/src/main/res/` (`mipmap-*`, `drawable*`).
+Replace those assets, then re-run `npx cap sync android` and rebuild.
+
+### Build a standalone APK (no Android Studio needed)
+
+```bash
+cd client/android
+./gradlew assembleDebug    # debug APK at app/build/outputs/apk/debug/app-debug.apk
+```
+
 ## Installation
 
 ### 1. Clone the repository

@@ -20,6 +20,9 @@ import LoadingState from '../components/LoadingState';
 import { useAuth } from '../context/AuthContext';
 import { fetchReportSummary, ReportSummary } from '../services/reports';
 import { ApiRequestError } from '../services/api';
+import { Share } from '@capacitor/share';
+import { IonButton, IonIcon } from '@ionic/react';
+import { shareSocialOutline } from 'ionicons/icons';
 
 type Period = 'today' | 'last7days' | 'month';
 
@@ -127,6 +130,25 @@ function Reports() {
               <p className="inventory-error">{loadError}</p>
             </IonText>
           )}
+
+          <IonButton
+            fill="outline"
+            size="small"
+            style={{ marginTop: 'var(--app-spacing-md)' }}
+            onClick={async () => {
+              try {
+                await Share.share({
+                  title: 'MarketList Report',
+                  text: `MarketList ${period} report — Sales: ${formatPrice(data?.totalSales ?? 0)}, Transactions: ${data?.transactionCount ?? 0}, Est. profit: ${formatPrice(data?.estimatedGrossProfit ?? 0)}`,
+                });
+              } catch {
+                // User dismissed the share sheet or share is unavailable.
+              }
+            }}
+          >
+            <IonIcon icon={shareSocialOutline} slot="start" />
+            Share
+          </IonButton>
 
           <div className="app-grid app-grid-3" style={{ marginTop: 'var(--app-spacing-md)' }}>
             <StatCard
