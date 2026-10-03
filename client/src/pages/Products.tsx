@@ -48,6 +48,7 @@ import {
 import { ApiRequestError } from '../services/api';
 import { Category, Product } from '../types';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { apiRequest } from '../services/api';
 
 interface ProductForm {
   name: string;
@@ -110,6 +111,8 @@ function Products() {
   const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget>(null);
   const [deleting, setDeleting] = useState(false);
   const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!token) return;
@@ -477,7 +480,7 @@ function Products() {
                     quality: 50,
                   });
                   if (photo.dataUrl) {
-                    setForm((current) => ({ ...current, imageUrl: photo.dataUrl! }));
+                    setCapturedPhoto(photo.dataUrl);
                   }
                 } catch (err) {
                   // User cancelled or permission denied — surface gracefully.
@@ -490,6 +493,49 @@ function Products() {
             >
               Take or Choose Photo
             </IonButton>
+            {capturedPhoto && (
+              <div className="app-card" style={{ marginTop: 'var(--app-spacing-sm)' }}>
+                <img
+                  src={capturedPhoto}
+                  alt="Selected product"
+                  style={{ width: '100%', borderRadius: 8 }}
+                />
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <IonButton
+                    size="small"
+                    disabled={uploadingPhoto}
+                    onClick={async () => {
+                      if (!token || !capturedPhoto) return;
+                      setUploadingPhoto(true);
+                      try {
+                        const result = await apiRequest<{ status: string; data: { url: string } }>(
+                          '/uploads/product-image',
+                          {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ dataUrl: capturedPhoto }),
+                          }
+                        );
+                        setForm((current) => ({ ...current, imageUrl: result.data.url }));
+                        setCapturedPhoto(null);
+                        setToastMessage('Photo uploaded.');
+                      } catch (err) {
+                        setToastMessage(
+                          err instanceof Error ? err.message : 'Photo upload failed. You can paste an image URL instead.'
+                        );
+                      } finally {
+                        setUploadingPhoto(false);
+                      }
+                    }}
+                  >
+                    {uploadingPhoto ? 'Uploading...' : 'Use Photo'}
+                  </IonButton>
+                  <IonButton size="small" fill="clear" onClick={() => setCapturedPhoto(null)}>
+                    Retake
+                  </IonButton>
+                </div>
+              </div>
+            )}
             <IonButton type="submit" expand="block" disabled={savingProduct}>
               {savingProduct ? 'Saving...' : editorMode === 'edit' ? 'Save changes' : 'Add product'}
             </IonButton>

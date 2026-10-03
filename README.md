@@ -159,7 +159,12 @@ cp .env.example .env
 | `DATABASE_URL` | PostgreSQL connection string          | — |
 | `JWT_SECRET`   | Secret for signing JWT tokens        | —       |
 | `JWT_EXPIRES_IN` | JWT token expiration duration      | `7d`    |
-| `CORS_ORIGIN`  | Allowed CORS origin                  | `http://localhost:5173` |
+| `CORS_ORIGIN` | | Allowed CORS origin(s), comma-separated | `http://localhost:5173` |
+| `AWS_ACCESS_KEY_ID` | For product image uploads | Neon Object Storage access key | `.env.local` |
+| `AWS_SECRET_ACCESS_KEY` | For product image uploads | Neon Object Storage secret | `.env.local` |
+| `AWS_ENDPOINT_URL_S3` | For product image uploads | Neon S3 endpoint | `.env.local` |
+| `AWS_REGION` | | Storage region | `us-east-2` |
+| `S3_BUCKET` | | Storage bucket name | `marketlistimages` |
 
 ### Required Environment Variables
 

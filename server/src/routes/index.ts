@@ -5,6 +5,7 @@ import categoryRoutes from './categoryRoutes';
 import productRoutes from './productRoutes';
 import saleRoutes from './saleRoutes';
 import profileRoutes from './profileRoutes';
+import uploadRoutes from './uploadRoutes';
 import { getDashboard } from '../controllers/dashboardController';
 import { getReportSummary } from '../controllers/reportsController';
 import { authenticateToken } from '../middleware/auth';
@@ -18,6 +19,7 @@ router.use('/categories', categoryRoutes);
 router.use('/products', productRoutes);
 router.use('/sales', saleRoutes);
 router.use('/profile', profileRoutes);
+router.use('/uploads', uploadRoutes);
 router.get('/dashboard', authenticateToken, asyncHandler(getDashboard));
 router.get('/reports/summary', authenticateToken, asyncHandler(getReportSummary));
 
