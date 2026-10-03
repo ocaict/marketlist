@@ -1,78 +1,80 @@
-import Database from 'better-sqlite3';
+import { Pool, PoolClient } from 'pg';
+import { AsyncLocalStorage } from 'async_hooks';
 import { config } from '../config';
-import path from 'path';
-import fs from 'fs';
 
-let db: Database.Database | null = null;
+let pool: Pool | null = null;
+const txStorage = new AsyncLocalStorage<PoolClient>();
 
-function getDb(): Database.Database {
-  if (!db) {
-    const dbPath = config.databaseUrl;
-    const dir = path.dirname(dbPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    db = new Database(dbPath);
-    db.pragma('journal_mode = WAL');
-    db.pragma('foreign_keys = ON');
+function getPool(): Pool {
+  if (!pool) {
+    pool = new Pool({ connectionString: config.databaseUrl });
   }
-  return db;
+  return pool;
 }
 
-export function query<T = Record<string, unknown>>(
+// Translate SQLite-style ? placeholders to Postgres $1..$n.
+function toPg(text: string): string {
+  let i = 0;
+  return text.replace(/\?/g, () => `$${++i}`);
+}
+
+function getClient(): Pool | PoolClient {
+  return txStorage.getStore() ?? getPool();
+}
+
+export async function query<T = Record<string, unknown>>(
   text: string,
   params: unknown[] = []
-): T[] {
-  const stmt = getDb().prepare(text);
-  return stmt.all(...params) as T[];
+): Promise<T[]> {
+  const result = await getClient().query(toPg(text), params);
+  return result.rows as T[];
 }
 
-export function queryOne<T = Record<string, unknown>>(
+export async function queryOne<T = Record<string, unknown>>(
   text: string,
   params: unknown[] = []
-): T | undefined {
-  const stmt = getDb().prepare(text);
-  return stmt.get(...params) as T | undefined;
+): Promise<T | undefined> {
+  const result = await getClient().query(toPg(text), params);
+  return result.rows[0] as T | undefined;
 }
 
-export function run(text: string, params: unknown[] = []): void {
-  const stmt = getDb().prepare(text);
-  stmt.run(...params);
+export async function run(text: string, params: unknown[] = []): Promise<void> {
+  await getClient().query(toPg(text), params);
 }
 
-export function withTransaction<T>(callback: () => T): T {
-  const database = getDb();
-  database.exec('BEGIN');
+export async function withTransaction<T>(callback: () => Promise<T> | T): Promise<T> {
+  const client = await getPool().connect();
   try {
-    const result = callback();
-    database.exec('COMMIT');
+    await client.query('BEGIN');
+    const result = await txStorage.run(client, callback);
+    await client.query('COMMIT');
     return result;
   } catch (error) {
-    database.exec('ROLLBACK');
+    await client.query('ROLLBACK');
     throw error;
+  } finally {
+    client.release();
   }
 }
 
-export function closeDb(): void {
-  if (db) {
-    db.close();
-    db = null;
+export async function closeDb(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = null;
   }
 }
 
-export function testConnection(): boolean {
+export async function testConnection(): Promise<boolean> {
   try {
-    getDb().prepare('SELECT 1').get();
+    await getPool().query('SELECT 1');
     return true;
   } catch {
     return false;
   }
 }
 
-export function initializeSchema(): void {
-  const database = getDb();
-
-  database.exec(`
+export async function initializeSchema(): Promise<void> {
+  await getPool().query(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -80,69 +82,63 @@ export function initializeSchema(): void {
       phone TEXT,
       business_name TEXT NOT NULL,
       password_hash TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS categories (
       id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS products (
       id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      category_id TEXT,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      category_id TEXT REFERENCES categories(id) ON DELETE SET NULL,
       name TEXT NOT NULL,
       sku TEXT,
-      cost_price REAL NOT NULL DEFAULT 0,
-      selling_price REAL NOT NULL DEFAULT 0,
+      cost_price DOUBLE PRECISION NOT NULL DEFAULT 0,
+      selling_price DOUBLE PRECISION NOT NULL DEFAULT 0,
       stock_quantity INTEGER NOT NULL DEFAULT 0,
       low_stock_threshold INTEGER NOT NULL DEFAULT 5,
       image_url TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS sales (
       id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      total_amount REAL NOT NULL DEFAULT 0,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      total_amount DOUBLE PRECISION NOT NULL DEFAULT 0,
       payment_method TEXT NOT NULL DEFAULT 'cash',
-      discount_amount REAL NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      discount_amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS sale_items (
       id TEXT PRIMARY KEY,
-      sale_id TEXT NOT NULL,
-      product_id TEXT NOT NULL,
+      sale_id TEXT NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
       quantity INTEGER NOT NULL CHECK (quantity > 0),
-      unit_price REAL NOT NULL CHECK (unit_price >= 0),
-      subtotal REAL NOT NULL CHECK (subtotal >= 0),
-      FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE,
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
+      unit_price DOUBLE PRECISION NOT NULL CHECK (unit_price >= 0),
+      subtotal DOUBLE PRECISION NOT NULL CHECK (subtotal >= 0)
     );
 
     CREATE TABLE IF NOT EXISTS stock_adjustments (
       id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      product_id TEXT NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
       previous_quantity INTEGER NOT NULL,
       new_quantity INTEGER NOT NULL,
       difference INTEGER NOT NULL,
       reason TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_amount DOUBLE PRECISION NOT NULL DEFAULT 0;
 
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id);
@@ -156,13 +152,4 @@ export function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_stock_adjustments_user_id ON stock_adjustments(user_id);
     CREATE INDEX IF NOT EXISTS idx_stock_adjustments_product_id ON stock_adjustments(product_id);
   `);
-
-  // Migration for databases created before discount_amount existed.
-  const saleColumns = database
-    .prepare("PRAGMA table_info(sales)")
-    .all()
-    .map((column) => (column as { name: string }).name);
-  if (!saleColumns.includes('discount_amount')) {
-    database.exec("ALTER TABLE sales ADD COLUMN discount_amount REAL NOT NULL DEFAULT 0");
-  }
 }

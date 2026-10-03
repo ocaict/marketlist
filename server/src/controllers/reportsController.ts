@@ -21,20 +21,20 @@ function getPeriodStart(period: 'today' | 'last7days' | 'month'): Date {
   }
 }
 
-export function getReportSummary(req: AuthRequest, res: Response): void {
+export async function getReportSummary(req: AuthRequest, res: Response): Promise<void> {
   const period = periodSchema.parse(req.query.period);
   const userId = req.user!.id;
   const start = getPeriodStart(period);
   const startIso = start.toISOString();
 
-  const totals = queryOne<{ totalSales: number; transactionCount: number }>(
-    `SELECT COALESCE(SUM(total_amount), 0) AS totalSales, COUNT(*) AS transactionCount
+  const totals = await queryOne<{ totalSales: number; transactionCount: number }>(
+    `SELECT COALESCE(SUM(total_amount), 0) AS "totalSales", COUNT(*)::int AS "transactionCount"
      FROM sales WHERE user_id = ? AND created_at >= ?`,
     [userId, startIso]
   ) ?? { totalSales: 0, transactionCount: 0 };
 
-  const profit = queryOne<{ estimatedGrossProfit: number }>(
-    `SELECT COALESCE(SUM((si.unit_price - p.cost_price) * si.quantity), 0) AS estimatedGrossProfit
+  const profit = await queryOne<{ estimatedGrossProfit: number }>(
+    `SELECT COALESCE(SUM((si.unit_price - p.cost_price) * si.quantity), 0) AS "estimatedGrossProfit"
      FROM sale_items si
      JOIN sales s ON s.id = si.sale_id
      JOIN products p ON p.id = si.product_id
@@ -42,20 +42,20 @@ export function getReportSummary(req: AuthRequest, res: Response): void {
     [userId, startIso]
   ) ?? { estimatedGrossProfit: 0 };
 
-  const topProducts = query(
-    `SELECT p.id, p.name, SUM(si.quantity) AS quantitySold, SUM(si.subtotal) AS revenue
+  const topProducts = await query(
+    `SELECT p.id, p.name, SUM(si.quantity)::int AS "quantitySold", SUM(si.subtotal) AS revenue
      FROM sale_items si
      JOIN sales s ON s.id = si.sale_id
      JOIN products p ON p.id = si.product_id
      WHERE s.user_id = ? AND s.created_at >= ?
      GROUP BY p.id, p.name
-     ORDER BY quantitySold DESC, revenue DESC
+     ORDER BY "quantitySold" DESC, revenue DESC
      LIMIT 5`,
     [userId, startIso]
   );
 
-  const trendRows = query<{ day: string; total: number }>(
-    `SELECT substr(created_at, 1, 10) AS day, SUM(total_amount) AS total
+  const trendRows = await query<{ day: string; total: number }>(
+    `SELECT to_char(created_at, 'YYYY-MM-DD') AS day, SUM(total_amount) AS total
      FROM sales
      WHERE user_id = ? AND created_at >= ?
      GROUP BY day

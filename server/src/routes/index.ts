@@ -7,6 +7,7 @@ import saleRoutes from './saleRoutes';
 import { getDashboard } from '../controllers/dashboardController';
 import { getReportSummary } from '../controllers/reportsController';
 import { authenticateToken } from '../middleware/auth';
+import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
@@ -15,7 +16,7 @@ router.use('/auth', authRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/products', productRoutes);
 router.use('/sales', saleRoutes);
-router.get('/dashboard', authenticateToken, getDashboard);
-router.get('/reports/summary', authenticateToken, getReportSummary);
+router.get('/dashboard', authenticateToken, asyncHandler(getDashboard));
+router.get('/reports/summary', authenticateToken, asyncHandler(getReportSummary));
 
 export default router;

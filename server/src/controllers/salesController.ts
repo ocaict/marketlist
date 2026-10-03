@@ -35,7 +35,7 @@ interface ProductForSale {
   stock_quantity: number;
 }
 
-export function createSale(req: AuthRequest, res: Response): void {
+export async function createSale(req: AuthRequest, res: Response): Promise<void> {
   const input = createSaleSchema.parse(req.body);
 
   // Reject duplicate product lines — quantities are merged per product.
@@ -44,7 +44,7 @@ export function createSale(req: AuthRequest, res: Response): void {
     quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity);
   }
 
-  const result = withTransaction(() => {
+  const result = await withTransaction(async () => {
     let subtotal = 0;
     const lines: Array<{
       product: ProductForSale;
@@ -54,7 +54,7 @@ export function createSale(req: AuthRequest, res: Response): void {
     }> = [];
 
     for (const [productId, quantity] of quantities) {
-      const product = queryOne<ProductForSale>(
+      const product = await queryOne<ProductForSale>(
         'SELECT id, name, selling_price, stock_quantity FROM products WHERE id = ? AND user_id = ?',
         [productId, req.user!.id]
       );
@@ -81,21 +81,21 @@ export function createSale(req: AuthRequest, res: Response): void {
 
     const saleId = crypto.randomUUID();
     const now = new Date().toISOString();
-    run(
+    await run(
       'INSERT INTO sales (id, user_id, total_amount, payment_method, discount_amount, created_at) VALUES (?, ?, ?, ?, ?, ?)',
       [saleId, req.user!.id, total, input.paymentMethod, discount, now]
     );
 
     for (const line of lines) {
-      run(
+      await run(
         'INSERT INTO sale_items (id, sale_id, product_id, quantity, unit_price, subtotal) VALUES (?, ?, ?, ?, ?, ?)',
         [crypto.randomUUID(), saleId, line.product.id, line.quantity, line.unitPrice, line.lineSubtotal]
       );
-      run(
+      await run(
         'UPDATE products SET stock_quantity = stock_quantity - ?, updated_at = ? WHERE id = ? AND user_id = ?',
         [line.quantity, now, line.product.id, req.user!.id]
       );
-      run(
+      await run(
         `INSERT INTO stock_adjustments (id, user_id, product_id, previous_quantity, new_quantity, difference, reason, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -114,25 +114,25 @@ export function createSale(req: AuthRequest, res: Response): void {
     return { saleId, subtotal, discount, total };
   });
 
-  const sale = getSaleById(req.user!.id, result.saleId);
+  const sale = await getSaleById(req.user!.id, result.saleId);
   res.status(201).json({ status: 'success', data: { sale } });
 }
 
-function getSaleById(userId: string, saleId: string) {
-  const sale = queryOne<SaleRow>(
+async function getSaleById(userId: string, saleId: string) {
+  const sale = await queryOne<SaleRow>(
     'SELECT id, user_id, total_amount, payment_method, discount_amount, created_at FROM sales WHERE id = ? AND user_id = ?',
     [saleId, userId]
   );
   if (!sale) {
     return null;
   }
-  const items = query(
-    `SELECT si.id, si.product_id AS productId, p.name AS productName, si.quantity,
-            si.unit_price AS unitPrice, si.subtotal
+  const items = await query(
+    `SELECT si.id, si.product_id AS "productId", p.name AS "productName", si.quantity,
+            si.unit_price AS "unitPrice", si.subtotal
      FROM sale_items si
      LEFT JOIN products p ON p.id = si.product_id
      WHERE si.sale_id = ?
-     ORDER BY si.rowid ASC`,
+     ORDER BY si.id ASC`,
     [saleId]
   );
   const subtotal = items.reduce((sum, item) => sum + (item as { subtotal: number }).subtotal, 0);
@@ -172,7 +172,7 @@ function getRangeStart(range: string): { start: Date | null; end: Date | null } 
   }
 }
 
-export function getSales(req: AuthRequest, res: Response): void {
+export async function getSales(req: AuthRequest, res: Response): Promise<void> {
   let rangeFilter = '';
   const params: unknown[] = [req.user!.id];
 
@@ -189,16 +189,16 @@ export function getSales(req: AuthRequest, res: Response): void {
     }
   }
 
-  const sales = query<SaleRow>(
+  const sales = await query<SaleRow>(
     `SELECT id, user_id, total_amount, payment_method, discount_amount, created_at FROM sales
      WHERE user_id = ?${rangeFilter}
-     ORDER BY created_at DESC, rowid DESC`,
+     ORDER BY created_at DESC, id DESC`,
     params
   );
 
-  const data = sales.map((sale) => {
-    const countRow = queryOne<{ count: number }>(
-      'SELECT COUNT(*) AS count FROM sale_items WHERE sale_id = ?',
+  const data = await Promise.all(sales.map(async (sale) => {
+    const countRow = await queryOne<{ count: number }>(
+      'SELECT COUNT(*)::int AS count FROM sale_items WHERE sale_id = ?',
       [sale.id]
     );
     return {
@@ -210,12 +210,12 @@ export function getSales(req: AuthRequest, res: Response): void {
       createdAt: sale.created_at,
       itemCount: countRow?.count ?? 0,
     };
-  });
+  }));
   res.status(200).json({ status: 'success', data: { sales: data } });
 }
 
-export function getSale(req: AuthRequest, res: Response): void {
-  const sale = getSaleById(req.user!.id, req.params.id);
+export async function getSale(req: AuthRequest, res: Response): Promise<void> {
+  const sale = await getSaleById(req.user!.id, req.params.id);
   if (!sale) {
     throw new AppError('Sale not found', 404);
   }

@@ -35,7 +35,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     const normalizedEmail = validated.email.toLowerCase().trim();
 
     // Check for duplicate email
-    const existingUser = queryOne<User>('SELECT id FROM users WHERE email = ?', [normalizedEmail]);
+    const existingUser = await queryOne<User>('SELECT id FROM users WHERE email = $1', [normalizedEmail]);
     if (existingUser) {
       throw new AppError('Email already registered', 409);
     }
@@ -48,9 +48,9 @@ export async function register(req: Request, res: Response): Promise<void> {
     const userId = crypto.randomUUID();
     const now = new Date().toISOString();
 
-    run(
+    await run(
       `INSERT INTO users (id, name, email, phone, business_name, password_hash, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [userId, validated.name, normalizedEmail, validated.phone || null, validated.businessName, passwordHash, now, now]
     );
 
@@ -62,8 +62,8 @@ export async function register(req: Request, res: Response): Promise<void> {
     );
 
     // Fetch created user (without password_hash)
-    const user = queryOne<User>(
-      'SELECT id, name, email, phone, business_name, created_at, updated_at FROM users WHERE id = ?',
+    const user = await queryOne<User>(
+      'SELECT id, name, email, phone, business_name, created_at, updated_at FROM users WHERE id = $1',
       [userId]
     );
 
@@ -106,8 +106,8 @@ export async function login(req: Request, res: Response): Promise<void> {
     const normalizedEmail = validated.email.toLowerCase().trim();
 
     // Find user
-    const user = queryOne<User>(
-      'SELECT * FROM users WHERE email = ?',
+    const user = await queryOne<User>(
+      'SELECT * FROM users WHERE email = $1',
       [normalizedEmail]
     );
 

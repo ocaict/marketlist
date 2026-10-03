@@ -37,3 +37,4 @@ client/.capacitor/
 
 # TypeScript
 *.tsbuildinfo
+.neon

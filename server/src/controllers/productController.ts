@@ -33,21 +33,21 @@ interface ProductRecord {
 }
 
 const productSelect = `
-  SELECT p.id, p.user_id AS userId, p.category_id AS categoryId,
-         c.name AS category, p.name, p.sku, p.cost_price AS costPrice,
-         p.selling_price AS sellingPrice, p.stock_quantity AS stockQuantity,
-         p.low_stock_threshold AS lowStockThreshold, p.image_url AS imageUrl,
-         p.created_at AS createdAt, p.updated_at AS updatedAt
+  SELECT p.id, p.user_id AS "userId", p.category_id AS "categoryId",
+         c.name AS category, p.name, p.sku, p.cost_price AS "costPrice",
+         p.selling_price AS "sellingPrice", p.stock_quantity AS "stockQuantity",
+         p.low_stock_threshold AS "lowStockThreshold", p.image_url AS "imageUrl",
+         p.created_at AS "createdAt", p.updated_at AS "updatedAt"
   FROM products p
   LEFT JOIN categories c ON c.id = p.category_id AND c.user_id = p.user_id
 `;
 
-function ensureOwnedCategory(categoryId: string | null | undefined, userId: string): void {
+async function ensureOwnedCategory(categoryId: string | null | undefined, userId: string): Promise<void> {
   if (categoryId == null) {
     return;
   }
 
-  const category = queryOne<{ id: string }>(
+  const category = await queryOne<{ id: string }>(
     'SELECT id FROM categories WHERE id = ? AND user_id = ?',
     [categoryId, userId]
   );
@@ -56,16 +56,16 @@ function ensureOwnedCategory(categoryId: string | null | undefined, userId: stri
   }
 }
 
-export function getProducts(req: AuthRequest, res: Response): void {
-  const products = query<ProductRecord>(
-    `${productSelect} WHERE p.user_id = ? ORDER BY p.name COLLATE NOCASE`,
+export async function getProducts(req: AuthRequest, res: Response): Promise<void> {
+  const products = await query<ProductRecord>(
+    `${productSelect} WHERE p.user_id = ? ORDER BY LOWER(p.name)`,
     [req.user!.id]
   );
   res.status(200).json({ status: 'success', data: { products } });
 }
 
-export function getProduct(req: AuthRequest, res: Response): void {
-  const product = queryOne<ProductRecord>(
+export async function getProduct(req: AuthRequest, res: Response): Promise<void> {
+  const product = await queryOne<ProductRecord>(
     `${productSelect} WHERE p.id = ? AND p.user_id = ?`,
     [req.params.id, req.user!.id]
   );
@@ -77,13 +77,13 @@ export function getProduct(req: AuthRequest, res: Response): void {
   res.status(200).json({ status: 'success', data: { product } });
 }
 
-export function createProduct(req: AuthRequest, res: Response): void {
+export async function createProduct(req: AuthRequest, res: Response): Promise<void> {
   const product = productSchema.parse(req.body);
-  ensureOwnedCategory(product.categoryId, req.user!.id);
+  await ensureOwnedCategory(product.categoryId, req.user!.id);
 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  run(
+  await run(
     `INSERT INTO products
       (id, user_id, category_id, name, sku, cost_price, selling_price,
        stock_quantity, low_stock_threshold, image_url, created_at, updated_at)
@@ -104,16 +104,16 @@ export function createProduct(req: AuthRequest, res: Response): void {
     ]
   );
 
-  const created = queryOne<ProductRecord>(
+  const created = await queryOne<ProductRecord>(
     `${productSelect} WHERE p.id = ? AND p.user_id = ?`,
     [id, req.user!.id]
   );
   res.status(201).json({ status: 'success', data: { product: created } });
 }
 
-export function updateProduct(req: AuthRequest, res: Response): void {
+export async function updateProduct(req: AuthRequest, res: Response): Promise<void> {
   const product = productSchema.parse(req.body);
-  const existing = queryOne<{ id: string }>(
+  const existing = await queryOne<{ id: string }>(
     'SELECT id FROM products WHERE id = ? AND user_id = ?',
     [req.params.id, req.user!.id]
   );
@@ -121,9 +121,9 @@ export function updateProduct(req: AuthRequest, res: Response): void {
   if (!existing) {
     throw new AppError('Product not found', 404);
   }
-  ensureOwnedCategory(product.categoryId, req.user!.id);
+  await ensureOwnedCategory(product.categoryId, req.user!.id);
 
-  run(
+  await run(
     `UPDATE products SET category_id = ?, name = ?, sku = ?, cost_price = ?,
        selling_price = ?, stock_quantity = ?, low_stock_threshold = ?, image_url = ?, updated_at = ?
      WHERE id = ? AND user_id = ?`,
@@ -142,15 +142,15 @@ export function updateProduct(req: AuthRequest, res: Response): void {
     ]
   );
 
-  const updated = queryOne<ProductRecord>(
+  const updated = await queryOne<ProductRecord>(
     `${productSelect} WHERE p.id = ? AND p.user_id = ?`,
     [req.params.id, req.user!.id]
   );
   res.status(200).json({ status: 'success', data: { product: updated } });
 }
 
-export function deleteProduct(req: AuthRequest, res: Response): void {
-  const existing = queryOne<{ id: string }>(
+export async function deleteProduct(req: AuthRequest, res: Response): Promise<void> {
+  const existing = await queryOne<{ id: string }>(
     'SELECT id FROM products WHERE id = ? AND user_id = ?',
     [req.params.id, req.user!.id]
   );
@@ -158,7 +158,7 @@ export function deleteProduct(req: AuthRequest, res: Response): void {
     throw new AppError('Product not found', 404);
   }
 
-  const saleItem = queryOne<{ id: string }>(
+  const saleItem = await queryOne<{ id: string }>(
     'SELECT id FROM sale_items WHERE product_id = ? LIMIT 1',
     [req.params.id]
   );
@@ -166,6 +166,6 @@ export function deleteProduct(req: AuthRequest, res: Response): void {
     throw new AppError('Products included in sales cannot be deleted', 409);
   }
 
-  run('DELETE FROM products WHERE id = ? AND user_id = ?', [req.params.id, req.user!.id]);
+  await run('DELETE FROM products WHERE id = ? AND user_id = ?', [req.params.id, req.user!.id]);
   res.status(204).send();
 }

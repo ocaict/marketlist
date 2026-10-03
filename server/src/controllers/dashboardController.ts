@@ -23,7 +23,7 @@ function getPeriodStart(period: 'today' | 'last7days' | 'month' | 'all'): Date |
   }
 }
 
-export function getDashboard(req: AuthRequest, res: Response): void {
+export async function getDashboard(req: AuthRequest, res: Response): Promise<void> {
   const period = periodSchema.parse(req.query.period);
   const userId = req.user!.id;
   const start = getPeriodStart(period);
@@ -32,42 +32,42 @@ export function getDashboard(req: AuthRequest, res: Response): void {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 
-  const salesStats = queryOne<{ todaysSales: number; transactionCount: number }>(
-    `SELECT COALESCE(SUM(total_amount), 0) AS todaysSales, COUNT(*) AS transactionCount
+  const salesStats = await queryOne<{ todaysSales: number; transactionCount: number }>(
+    `SELECT COALESCE(SUM(total_amount), 0) AS "todaysSales", COUNT(*)::int AS "transactionCount"
      FROM sales
      WHERE user_id = ? AND created_at >= ?`,
     [userId, todayStart]
   ) ?? { todaysSales: 0, transactionCount: 0 };
 
-  const productStats = queryOne<{ totalProducts: number; lowStockCount: number }>(
-    `SELECT COUNT(*) AS totalProducts,
-            SUM(CASE WHEN stock_quantity <= low_stock_threshold THEN 1 ELSE 0 END) AS lowStockCount
+  const productStats = await queryOne<{ totalProducts: number; lowStockCount: number }>(
+    `SELECT COUNT(*)::int AS "totalProducts",
+            COALESCE(SUM(CASE WHEN stock_quantity <= low_stock_threshold THEN 1 ELSE 0 END), 0)::int AS "lowStockCount"
      FROM products WHERE user_id = ?`,
     [userId]
   ) ?? { totalProducts: 0, lowStockCount: 0 };
 
-  const recentSales = query(
-    `SELECT id, total_amount AS total, payment_method AS paymentMethod, created_at AS createdAt
+  const recentSales = await query(
+    `SELECT id, total_amount AS total, payment_method AS "paymentMethod", created_at AS "createdAt"
      FROM sales WHERE user_id = ?
-     ORDER BY created_at DESC, rowid DESC
+     ORDER BY created_at DESC, id DESC
      LIMIT 5`,
     [userId]
   );
 
-  const topProducts = query(
-    `SELECT p.id, p.name, SUM(si.quantity) AS quantitySold, SUM(si.subtotal) AS revenue
+  const topProducts = await query(
+    `SELECT p.id, p.name, SUM(si.quantity)::int AS "quantitySold", SUM(si.subtotal) AS revenue
      FROM sale_items si
      JOIN sales s ON s.id = si.sale_id AND s.user_id = ?
      JOIN products p ON p.id = si.product_id
      WHERE s.user_id = ?${startIso ? ' AND s.created_at >= ?' : ''}
      GROUP BY p.id, p.name
-     ORDER BY quantitySold DESC, revenue DESC
+     ORDER BY "quantitySold" DESC, revenue DESC
      LIMIT 5`,
     startIso ? [userId, userId, startIso] : [userId, userId]
   );
 
-  const profitRow = queryOne<{ estimatedGrossProfit: number }>(
-    `SELECT COALESCE(SUM((si.unit_price - p.cost_price) * si.quantity), 0) AS estimatedGrossProfit
+  const profitRow = await queryOne<{ estimatedGrossProfit: number }>(
+    `SELECT COALESCE(SUM((si.unit_price - p.cost_price) * si.quantity), 0) AS "estimatedGrossProfit"
      FROM sale_items si
      JOIN sales s ON s.id = si.sale_id
      JOIN products p ON p.id = si.product_id

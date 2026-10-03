@@ -46,6 +46,14 @@ export function errorHandler(
   });
 }
 
+export function asyncHandler<R extends Request = Request>(
+  fn: (req: R, res: Response, next: NextFunction) => Promise<unknown>
+) {
+  return (req: R, res: Response, next: NextFunction): void => {
+    fn(req, res, next).catch(next);
+  };
+}
+
 export function notFoundHandler(_req: Request, res: Response): void {
   res.status(404).json({
     status: 'error',

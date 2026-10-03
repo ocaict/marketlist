@@ -17,36 +17,36 @@ interface CategoryRecord {
   updated_at: string;
 }
 
-export function getCategories(req: AuthRequest, res: Response): void {
-  const categories = query<CategoryRecord>(
+export async function getCategories(req: AuthRequest, res: Response): Promise<void> {
+  const categories = await query<CategoryRecord>(
     `SELECT id, user_id, name, created_at, updated_at
-     FROM categories WHERE user_id = ? ORDER BY name COLLATE NOCASE`,
+     FROM categories WHERE user_id = ? ORDER BY LOWER(name)`,
     [req.user!.id]
   );
 
   res.status(200).json({ status: 'success', data: { categories } });
 }
 
-export function createCategory(req: AuthRequest, res: Response): void {
+export async function createCategory(req: AuthRequest, res: Response): Promise<void> {
   const { name } = categorySchema.parse(req.body);
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
-  run(
+  await run(
     'INSERT INTO categories (id, user_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
     [id, req.user!.id, name, now, now]
   );
 
-  const category = queryOne<CategoryRecord>(
+  const category = await queryOne<CategoryRecord>(
     'SELECT id, user_id, name, created_at, updated_at FROM categories WHERE id = ? AND user_id = ?',
     [id, req.user!.id]
   );
   res.status(201).json({ status: 'success', data: { category } });
 }
 
-export function updateCategory(req: AuthRequest, res: Response): void {
+export async function updateCategory(req: AuthRequest, res: Response): Promise<void> {
   const { name } = categorySchema.parse(req.body);
-  const result = queryOne<CategoryRecord>(
+  const result = await queryOne<CategoryRecord>(
     'SELECT id, user_id, name, created_at, updated_at FROM categories WHERE id = ? AND user_id = ?',
     [req.params.id, req.user!.id]
   );
@@ -55,19 +55,19 @@ export function updateCategory(req: AuthRequest, res: Response): void {
     throw new AppError('Category not found', 404);
   }
 
-  run(
+  await run(
     'UPDATE categories SET name = ?, updated_at = ? WHERE id = ? AND user_id = ?',
     [name, new Date().toISOString(), req.params.id, req.user!.id]
   );
-  const category = queryOne<CategoryRecord>(
+  const category = await queryOne<CategoryRecord>(
     'SELECT id, user_id, name, created_at, updated_at FROM categories WHERE id = ? AND user_id = ?',
     [req.params.id, req.user!.id]
   );
   res.status(200).json({ status: 'success', data: { category } });
 }
 
-export function deleteCategory(req: AuthRequest, res: Response): void {
-  const result = queryOne<{ id: string }>(
+export async function deleteCategory(req: AuthRequest, res: Response): Promise<void> {
+  const result = await queryOne<{ id: string }>(
     'SELECT id FROM categories WHERE id = ? AND user_id = ?',
     [req.params.id, req.user!.id]
   );
@@ -76,6 +76,6 @@ export function deleteCategory(req: AuthRequest, res: Response): void {
     throw new AppError('Category not found', 404);
   }
 
-  run('DELETE FROM categories WHERE id = ? AND user_id = ?', [req.params.id, req.user!.id]);
+  await run('DELETE FROM categories WHERE id = ? AND user_id = ?', [req.params.id, req.user!.id]);
   res.status(204).send();
 }

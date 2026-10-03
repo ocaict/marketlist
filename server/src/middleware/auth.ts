@@ -28,21 +28,29 @@ export function authenticateToken(
 
   try {
     const decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;
-    const user = queryOne<User>(
-      'SELECT id, name, email, phone, business_name, created_at, updated_at FROM users WHERE id = ?',
+    queryOne<User>(
+      'SELECT id, name, email, phone, business_name, created_at, updated_at FROM users WHERE id = $1',
       [decoded.userId]
-    );
-
-    if (!user) {
-      throw new AppError('User not found', 401);
-    }
-
-    req.user = user;
-    next();
+    )
+      .then((user) => {
+        if (!user) {
+          throw new AppError('User not found', 401);
+        }
+        req.user = user;
+        next();
+      })
+      .catch((error) => {
+        if (error instanceof AppError) {
+          next(error);
+        } else {
+          next(new AppError('Invalid or expired token', 401));
+        }
+      });
   } catch (error) {
     if (error instanceof AppError) {
-      throw error;
+      next(error);
+      return;
     }
-    throw new AppError('Invalid or expired token', 401);
+    next(new AppError('Invalid or expired token', 401));
   }
 }
