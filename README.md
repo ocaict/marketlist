@@ -430,6 +430,44 @@ Note: `npm run lint` exists but ESLint is not installed/configured — `typechec
 
 API smoke tests (require the API running locally): `cd server && node test-crud.js` (also `test-stock.js`, `test-sales.js`, `test-sales-history.js`, `test-dashboard.js`, `test-reports.js`).
 
+## Workshop Deployment (free tiers)
+
+Current live deployment:
+
+| Layer | Service | Tier | Notes |
+| ----- | ------- | ---- | ----- |
+| Frontend (web) | Netlify | Free | SPA, auto-deploys from `main` |
+| Backend | Render | Free | Express API, sleeps after ~15 min idle |
+| Database | Neon | Free | Serverless Postgres |
+| Object storage | Neon Object Storage | Free | Product images |
+| Repository | GitHub | Free | `ocaict/marketlist` |
+
+> **Qualification:** free tiers are suitable for demos, workshops, and low-traffic small-business trials. They are **not** suitable for high-traffic commercial production: expect cold starts on the backend, single-instance deployments, no SLAs, and limited storage/bandwidth. A real production rollout should move to paid tiers of the same services (or equivalents) before onboarding paying customers.
+
+### Frontend on Netlify
+
+1. Netlify → **Add new site → Import from Git** → `ocaict/marketlist`
+2. **Base directory**: `client`
+3. **Build command**: `npm run build`
+4. **Publish directory**: `dist`
+5. **Environment variables**: `VITE_API_URL=https://marketlist-api-g8ms.onrender.com/api`
+6. `client/public/_redirects` already ships an SPA fallback (`/* /index.html 200`) so deep links like `/dashboard` work on refresh.
+
+### Backend on Render (already deployed)
+
+- Root Directory: `server`
+- Build: `npm install --include=dev && npm run build`
+- Start: `npm start`
+- Health check: `/api/health`
+- Env vars: `NODE_ENV=production`, `JWT_SECRET` (>=32 chars), `DATABASE_URL` (Neon pooled URL), `CORS_ORIGIN` (comma-separated exact origins), `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, `S3_BUCKET`
+- CORS: once Netlify gives you a domain, set e.g.
+  `CORS_ORIGIN=https://your-site.netlify.app,https://localhost`
+  (`https://localhost` covers the Android Capacitor WebView; add `capacitor://localhost` if you later ship iOS.)
+
+### Secrets
+
+`.env`, `.env.local`, `server/.env`, `.neon`, and API keys are all gitignored. `.env.example` files contain placeholders only — never commit real credentials.
+
 ## Android
 
 Covered in [Mobile (Capacitor + Android)](#mobile-capacitor--android) above. TL;DR:
