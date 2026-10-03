@@ -34,6 +34,8 @@ interface AuthContextType {
     confirmPassword: string;
   }) => Promise<void>;
   logout: () => void;
+  updateUser: (user: User) => void;
+  notifySuccess: (message: string) => void;
   clearSuccessMessage: () => void;
 }
 
@@ -96,6 +98,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearSuccessMessage = useCallback(() => setSuccessMessage(null), []);
 
+  const updateUser = useCallback((updatedUser: User) => {
+    setUser(updatedUser);
+  }, []);
+
+  const notifySuccess = useCallback((message: string) => {
+    setSuccessMessage(message);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -107,6 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        updateUser,
+        notifySuccess,
         clearSuccessMessage,
       }}
     >
